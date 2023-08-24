@@ -99,7 +99,7 @@ with tab2:
     )
 
     # Show the plot
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 st.write("""
 ## Anomaly Detection
