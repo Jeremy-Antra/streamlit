@@ -69,7 +69,7 @@ with tab1:
     )
 
     # Show the plot
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
 with tab2:
     stock_prices = vdf["Stock Price: Average, Min, Max"].to_list()
     stock_averages = []
