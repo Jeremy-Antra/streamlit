@@ -9,19 +9,22 @@ st.write("""
 # ESG For Everyone - Challenge 2
 """)
 
-df = pd.read_csv("ESGData13-22.csv")
-lst = df['I1: Company Name'].unique()
+df = pd.read_csv("10yearsdatawithstock.csv")
+
+lst = df['CompanyName'].unique()
 com = st.selectbox(
     'Select the company you wish to view',
     lst)
-vdf = df[df['I1: Company Name'] == com]
+vdf = df[df['CompanyName'] == com]
 
 st.write("""
 ## Latest Metrics
 """)
+
+##
 esg_last_two = vdf['ESG_Score'].to_list()[-2:]
-revenue_last_two = vdf['I3: Revenue'].to_list()[-2:]
-stock_last_two = vdf["Stock Price: Average, Min, Max"].to_list()[-2:]
+revenue_last_two = vdf['Revenue'].to_list()[-2:]
+stock_last_two = vdf["E Stock"].to_list()[-2:]  ############################E Stock, stock price
 stock_avg_last_two = [float(i) for a in stock_last_two for i in a[1:-1].split(',')]
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("ESG Score", esg_last_two[1], round(esg_last_two[1] - esg_last_two[0], 2))
@@ -29,7 +32,7 @@ col2.metric("Revenue", "$" + str(round(revenue_last_two[1] / 1000000, 2)) + "M",
             str(round((revenue_last_two[1] - revenue_last_two[0]) / revenue_last_two[0], 2)) + "%")
 col3.metric("Stock Price YTD", "$" + str(stock_avg_last_two[3]),
             round(stock_avg_last_two[3] - stock_avg_last_two[0], 2))
-mean_df = vdf.groupby('I4: Year')['ESG_Score'].mean()
+mean_df = vdf.groupby('Year')['ESG_Score'].mean()
 total_mean = mean_df.mean()
 min_score, max_score = mean_df.min(), mean_df.max()
 means = mean_df.to_list()[-2:]
@@ -49,11 +52,11 @@ with tab1:
     fig = go.Figure()
 
     # First trace for Revenue
-    fig.add_trace(go.Scatter(x=vdf['I4: Year'], y=vdf['I3: Revenue'], mode='lines+markers',
+    fig.add_trace(go.Scatter(x=vdf['Year'], y=vdf['Revenue'], mode='lines+markers',
                              name='Revenue', line=dict(color='blue')))
 
     # Second trace for ESG Score
-    fig.add_trace(go.Scatter(x=vdf['I4: Year'], y=vdf['ESG_Score'], mode='lines+markers', name='ESG Score',
+    fig.add_trace(go.Scatter(x=vdf['Year'], y=vdf['ESG_Score'], mode='lines+markers', name='ESG Score',
                              yaxis='y2', line=dict(color='orange')))
 
     # Create a layout with two y-axes
@@ -71,7 +74,7 @@ with tab1:
     # Show the plot
     st.plotly_chart(fig, use_container_width=True)
 with tab2:
-    stock_prices = vdf["Stock Price: Average, Min, Max"].to_list()
+    stock_prices = vdf["E Stock"].to_list()
     stock_averages = []
     for s in stock_prices:
         stock_averages.append([float(x) for x in s[1:-1].split(',')][0])
@@ -79,11 +82,11 @@ with tab2:
     fig = go.Figure()
 
     # First trace for Stock Prices
-    fig.add_trace(go.Scatter(x=vdf['I4: Year'], y=stock_averages, mode='lines+markers',
+    fig.add_trace(go.Scatter(x=vdf['Year'], y=stock_averages, mode='lines+markers',
                              name='Stock Price', line=dict(color='green')))
 
     # Second trace for ESG Score
-    fig.add_trace(go.Scatter(x=vdf['I4: Year'], y=vdf['ESG_Score'], mode='lines+markers', name='ESG Score',
+    fig.add_trace(go.Scatter(x=vdf['Year'], y=vdf['ESG_Score'], mode='lines+markers', name='ESG Score',
                              yaxis='y2', line=dict(color='orange')))
 
     # Create a layout with two y-axes
@@ -104,8 +107,9 @@ with tab2:
 st.write("""
 ## Anomaly Detection
 """)
+df = pd.read_csv("10yearsdatawithstock.csv")
 
-esg_cols = vdf.columns.to_list()[4:22]
+esg_cols = vdf.columns.to_list()[6:191]   ####################################################[5:196]
 esg_full = {'E': 'Environmental', 'S': 'Social', 'G': 'Governance'}
 
 
@@ -117,7 +121,7 @@ def get_model_prediction(xcols, ycols, train_df):
 
     model.fit(X, Y)
 
-    y_pred = model.predict([[2023]])
+    y_pred = model.predict([[2010]])
 
     return pd.DataFrame({c: [max(0, min(100, round(d, 2)))] for c, d in zip(ycols, y_pred[0])})
 
@@ -125,31 +129,33 @@ def get_model_prediction(xcols, ycols, train_df):
 tab1, tab2= st.tabs(["On Features", "On Timely Trends"])
 with tab1:
     predict = st.checkbox(label="Show Feature Prediction")
-    years = vdf['I4: Year'].unique()
+    years = vdf['Year'].unique()
     if predict:
         # Add histogram data
         selected_year = st.select_slider(
             'Predicting based on the previous data',
-            [2022, 2023],
-            value=2023,
+            [2001, 2010],
+            value=2010,
             disabled=True)
 
-        cdf = get_model_prediction('I4: Year', esg_cols, vdf)
+        cdf = get_model_prediction('Year', esg_cols, vdf)
 
     else:
         selected_year = st.select_slider(
             'Select the year you wish to check',
             years, value=years.max())
         # Add histogram data
-        cdf = vdf[vdf['I4: Year'] == selected_year]
+        cdf = vdf[vdf['Year'] == selected_year]
 
     cdf = pd.melt(cdf[esg_cols], var_name='ESG Items', value_name='ESG Value')
-    cdf['Category'] = cdf['ESG Items'].apply(lambda x: esg_full[x[0]])
+    print(cdf)
+    cdf['Category'] = cdf['ESG Items'].apply(lambda x: esg_full[x[0]])    ###################??
+    #cdf['Category'] = cdf['ESG Items'].apply(lambda x: esg_full.get(x[0], 'Unknown'))
     avg = cdf['ESG Value'].mean()
     cdf.loc[cdf['ESG Value'] <= avg / 6, 'Category'] = 'Anomaly'
-    adf = cdf[cdf['Category'] == 'Anomaly']
-    cdf = cdf.drop(cdf[cdf['Category'] == 'Anomaly'].index)
-    cdf = pd.concat([cdf, adf], ignore_index=True)
+    # adf = cdf[cdf['Category'] == 'Anomaly']
+    # cdf = cdf.drop(cdf[cdf['Category'] == 'Anomaly'].index)
+    # cdf = pd.concat([cdf, adf], ignore_index=True)
 
     fig = px.scatter(
         cdf,
@@ -160,13 +166,13 @@ with tab1:
         size_max=30,
     )
     st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-with tab2:
+with tab2:  ##
     predict = st.checkbox(label="Show Trends Prediction")
     level = ['Low', 'Mid', 'Normal', 'High', 'Robust']
     conf = st.select_slider("Choose the confidence bound",
                             options=level, value=level[2])
     conf_lvl = {k:v for k, v in zip(level, [0.97, 0.95, 0.9, 0.8, 0.7])}
-    cdf = vdf.rename(columns={'I4: Year': 'Year'})
+    cdf = vdf.rename(columns={'Year': 'Year'})
     stds = round(mean_df.std() * 2, 2)
     maxCol=lambda x: max(abs(x.min()), x.max())
     diff_cols = [l+' Diff' for l in esg_full.keys()]
@@ -178,7 +184,7 @@ with tab2:
     if predict:
         pred = get_model_prediction(['Year'], [k+' Average Score' for k in esg_full.keys()]
                                     + ['ESG_Score'], cdf)
-        pred['Year'] = 2023
+        pred['Year'] = 2010
         cdf = pd.concat([cdf, pred], ignore_index=True)
     fig = go.Figure([
         go.Scatter(
@@ -229,7 +235,7 @@ with tab2:
     ])
     if predict:
         fig.add_shape(type="rect",
-                      x0=2022.5, y0=0, x1=2023.5, y1=100,
+                      x0=2009, y0=0, x1=2010, y1=100,
                       line=dict(color="RoyalBlue"),
                       )
     fig.update_layout(
@@ -242,3 +248,5 @@ with tab2:
         legend={'traceorder': 'normal'}
     )
     st.plotly_chart(fig, theme="streamlit", use_container_width=True)
+
+
