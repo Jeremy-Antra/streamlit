@@ -109,7 +109,7 @@ st.write("""
 """)
 df = pd.read_csv("10yearsdatawithstock.csv")
 
-esg_cols = vdf.columns.to_list()[6:191]   ####################################################[5:196]
+esg_cols = vdf.columns.to_list()[7:191]   ####################################################[5:196]
 esg_full = {'E': 'Environmental', 'S': 'Social', 'G': 'Governance'}
 
 
